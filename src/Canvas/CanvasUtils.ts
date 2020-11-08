@@ -39,12 +39,13 @@ const findPosition = (context: CanvasRenderingContext2D, e: React.MouseEvent<HTM
 
 interface mouseBehaviorProps {
   canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-  canvasData: React.MutableRefObject<CanvasData>, 
+  canvasData: CanvasData,
+  setCanvasData: (canvasData: CanvasData) => void,
   e: React.MouseEvent<HTMLCanvasElement, MouseEvent>
 };
 
 const rectangleMouseBehaviors = {
-  "down": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "down": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
     if (context) {
       const pos = findPosition(context, e);
@@ -54,37 +55,32 @@ const rectangleMouseBehaviors = {
         end: pos,
         snapshot: context.getImageData(0, 0, WIDTH, HEIGHT)
       };
-      canvasData.current.currentOperation = op;
+      setCanvasData({...canvasData, currentOperation: op});
     }
   },
   "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.current.currentOperation;
+    const op = canvasData.currentOperation;
     if (context && op) {
       const rectOp = op as PointOperation;
       const pos = findPosition(context, e);
-      rectOp.end = pos;
       rectOp.snapshot && context.putImageData(rectOp.snapshot, 0, 0);
       context.strokeRect(rectOp.start.x, rectOp.start.y, pos.x - rectOp.start.x, pos.y - rectOp.start.y);
     }
   },
-  "up": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "up": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.current.currentOperation;
-    if (context && op) {
-      const rectOp = op as PointOperation;
-      rectOp.end = findPosition(context, e);
-      rectOp.snapshot = undefined;
-      canvasData.current.operations.push(rectOp);
-      canvasData.current.currentOperation = undefined;
-      canvasData.current.operationPointer++;
-      console.log("canvas", canvasData);
-    }
+    const op = canvasData.currentOperation;
+    context && op && setCanvasData({
+      currentOperation: undefined,
+      operationPointer: canvasData.operationPointer + 1,
+      operations: canvasData.operations.concat({ ...(op as PointOperation), end: findPosition(context, e), snapshot: undefined })
+    });
   }
 };
 
 const lineMouseBehaviors = {
-  "down": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "down": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
     if (context) {
       const pos = findPosition(context, e);
@@ -94,16 +90,15 @@ const lineMouseBehaviors = {
         end: pos,
         snapshot: context.getImageData(0, 0, WIDTH, HEIGHT)
       };
-      canvasData.current.currentOperation = op;
+      setCanvasData({...canvasData, currentOperation: op});
     }
   },
-  "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "move": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.current.currentOperation;
+    const op = canvasData.currentOperation;
     if (context && op) {
       const lineOp = op as PointOperation;
       const pos = findPosition(context, e);
-      lineOp.end = pos;
       lineOp.snapshot && context.putImageData(lineOp.snapshot, 0, 0);
       context.beginPath();
       context.moveTo(lineOp.start.x, lineOp.start.y);
@@ -112,23 +107,19 @@ const lineMouseBehaviors = {
       context.stroke();
     }
   },
-  "up": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "up": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.current.currentOperation;
-    if (context && op) {
-      const lineOp = op as PointOperation;
-      lineOp.end = findPosition(context, e);
-      lineOp.snapshot = undefined;
-      canvasData.current.operations.push(lineOp);
-      canvasData.current.currentOperation = undefined;
-      canvasData.current.operationPointer++;
-      console.log("canvas", canvasData);
-    }
+    const op = canvasData.currentOperation;
+    context && op && setCanvasData({
+      currentOperation: undefined,
+      operationPointer: canvasData.operationPointer + 1,
+      operations: canvasData.operations.concat({ ...(op as PointOperation), end: findPosition(context, e), snapshot: undefined })
+    });
   }
 };
 
 const penMouseBehaviors = {
-  "down": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "down": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
     if (context) {
       const pos = findPosition(context, e);
@@ -136,17 +127,17 @@ const penMouseBehaviors = {
         type: "pen",
         positions: [pos]
       };
-      canvasData.current.currentOperation = op;
+      setCanvasData({...canvasData, currentOperation: op});
     }
   },
-  "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "move": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.current.currentOperation;
+    const op = canvasData.currentOperation;
     if (context && op) {
       const penOp = op as PathOperation;
       const lastPos = penOp.positions[penOp.positions.length - 1];
       const pos = findPosition(context, e);
-      penOp.positions.push(pos);
+      setCanvasData({...canvasData, currentOperation: {...penOp, positions: penOp.positions.concat(pos)}});
       context.beginPath();
       context.moveTo(lastPos.x, lastPos.y);
       context.lineTo(pos.x, pos.y);
@@ -154,16 +145,14 @@ const penMouseBehaviors = {
       context.stroke();
     }
   },
-  "up": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "up": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.current.currentOperation;
-    if (context && op) {
-      const penOp = op as PathOperation;
-      canvasData.current.operations.push(penOp);
-      canvasData.current.currentOperation = undefined;
-      canvasData.current.operationPointer++;
-      console.log("canvas", canvasData);
-    }
+    const op = canvasData.currentOperation;
+    context && op && setCanvasData({
+      currentOperation: undefined,
+      operationPointer: canvasData.operationPointer + 1,
+      operations: canvasData.operations.concat(op as PathOperation)
+    });
   }
 };
 

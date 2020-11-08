@@ -12,7 +12,7 @@ function App() {
       <MenuBar />
       <Layout>
         <Sider id={styles.sider} collapsed={true}><Toolbar /></Sider>
-        <Content id={styles.content}><Canvas mode={"pen"} /></Content>
+        <Content id={styles.content}><Canvas /></Content>
       </Layout>
     </Layout>
   );
