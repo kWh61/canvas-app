@@ -1,11 +1,10 @@
 import React from 'react';
-import './App.css';
-import Canvas from './Canvas';
+import Canvas from './Canvas/Canvas';
 
 function App() {
   return (
     <div>
-      <Canvas />
+      <Canvas mode={"rectangle"} />
     </div>
   );
 }
