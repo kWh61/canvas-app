@@ -1,0 +1,13 @@
+#container {
+  min-height: 100vh;
+}
+
+#sider {
+  background-color: #EEE6CD;
+  box-shadow: 0 .3125rem 1.25rem 0 rgba(0,0,0,.24);
+  width: 100px;
+}
+
+#content {
+  background-color: #EEE6CD;
+}

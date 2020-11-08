@@ -1,0 +1,24 @@
+.menuButton {
+  border: none;
+  background-color: #F4F2E7;
+  width: 48px;
+  height: 48px;
+  margin-top: 10px;
+}
+
+.menuButton:hover,
+.activeMenuButton {
+  border: none;
+  background-color: #ECA940;
+  width: 48px;
+  height: 48px;
+  margin-top: 10px;
+}
+
+.disabledMenuButton {
+  border: none;
+  background-color: #AB9C84;
+  width: 48px;
+  height: 48px;
+  margin-top: 10px;
+}

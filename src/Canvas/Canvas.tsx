@@ -8,11 +8,10 @@ const Canvas: React.FC<{ mode: "rectangle"|"line"|"pen" }> = ({ mode }) => {
 
   return (
     <canvas
-      id="canvas"
+      id={styles.canvas}
       ref={canvasRef}
       width={WIDTH}
       height={HEIGHT}
-      style={{boxShadow: "0 .3125rem 1.25rem 0 rgba(0,0,0,.24)", margin: "10% 10%"}}
       onMouseDown={e => mouseBehaviorWrapper[mode]["down"]({canvasRef, canvasData, e})}
       onMouseMove={e => mouseBehaviorWrapper[mode]["move"]({canvasRef, canvasData, e})}
       onMouseUp={e => mouseBehaviorWrapper[mode]["up"]({canvasRef, canvasData, e})}
