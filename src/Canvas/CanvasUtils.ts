@@ -63,6 +63,7 @@ const rectangleMouseBehaviors = {
     if (context && op) {
       const rectOp = op as PointOperation;
       const pos = findPosition(context, e);
+      rectOp.end = pos;
       rectOp.snapshot && context.putImageData(rectOp.snapshot, 0, 0);
       context.strokeRect(rectOp.start.x, rectOp.start.y, pos.x - rectOp.start.x, pos.y - rectOp.start.y);
     }
@@ -102,10 +103,12 @@ const lineMouseBehaviors = {
     if (context && op) {
       const lineOp = op as PointOperation;
       const pos = findPosition(context, e);
+      lineOp.end = pos;
       lineOp.snapshot && context.putImageData(lineOp.snapshot, 0, 0);
       context.beginPath();
       context.moveTo(lineOp.start.x, lineOp.start.y);
       context.lineTo(pos.x, pos.y);
+      context.closePath();
       context.stroke();
     }
   },
@@ -124,8 +127,48 @@ const lineMouseBehaviors = {
   }
 };
 
+const penMouseBehaviors = {
+  "down": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+    const context = canvasRef.current?.getContext("2d");
+    if (context) {
+      const pos = findPosition(context, e);
+      const op: PathOperation = {
+        type: "pen",
+        positions: [pos]
+      };
+      canvasData.current.currentOperation = op;
+    }
+  },
+  "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+    const context = canvasRef.current?.getContext("2d");
+    const op = canvasData.current.currentOperation;
+    if (context && op) {
+      const penOp = op as PathOperation;
+      const lastPos = penOp.positions[penOp.positions.length - 1];
+      const pos = findPosition(context, e);
+      penOp.positions.push(pos);
+      context.beginPath();
+      context.moveTo(lastPos.x, lastPos.y);
+      context.lineTo(pos.x, pos.y);
+      context.closePath();
+      context.stroke();
+    }
+  },
+  "up": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+    const context = canvasRef.current?.getContext("2d");
+    const op = canvasData.current.currentOperation;
+    if (context && op) {
+      const penOp = op as PathOperation;
+      canvasData.current.operations.push(penOp);
+      canvasData.current.currentOperation = undefined;
+      canvasData.current.operationPointer++;
+      console.log("canvas", canvasData);
+    }
+  }
+};
+
 export const mouseBehaviorWrapper = {
   "rectangle": rectangleMouseBehaviors,
   "line": lineMouseBehaviors,
-  "pen": rectangleMouseBehaviors
+  "pen": penMouseBehaviors
 };

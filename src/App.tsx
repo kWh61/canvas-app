@@ -4,7 +4,7 @@ import Canvas from './Canvas/Canvas';
 function App() {
   return (
     <div>
-      <Canvas mode={"line"} />
+      <Canvas mode={"pen"} />
     </div>
   );
 }
