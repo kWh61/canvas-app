@@ -1,18 +1,19 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { Layout } from 'antd';
 import Canvas from './Canvas/Canvas';
 import styles from './App.module.css';
 import MenuBar from './MenuBar/MenuBar';
 import Toolbar from './Toolbar/Toolbar';
 
-function App() {
+const App: React.FC = () => {
   const { Sider, Content } = Layout;
+  const canvasRef = useRef<HTMLCanvasElement|null>(null);
   return (
     <Layout id={styles.container}>
       <MenuBar />
       <Layout>
-        <Sider id={styles.sider} collapsed={true}><Toolbar /></Sider>
-        <Content id={styles.content}><Canvas /></Content>
+        <Sider id={styles.sider} collapsed={true}><Toolbar canvasRef={canvasRef} /></Sider>
+        <Content id={styles.content}><Canvas canvasRef={canvasRef} /></Content>
       </Layout>
     </Layout>
   );

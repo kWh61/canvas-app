@@ -23,8 +23,14 @@ export interface CanvasData {
   operations: Operation[]
 };
 
-export const WIDTH = 500;
-export const HEIGHT = 300;
+interface mouseBehaviorProps {
+  width: number,
+  height: number,
+  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
+  canvasData: CanvasData,
+  setCanvasData: (canvasData: CanvasData) => void,
+  e: React.MouseEvent<HTMLCanvasElement, MouseEvent>
+};
 
 /**
  * Returns the current position of the mouse relative to the canvas element.
@@ -37,125 +43,138 @@ const findPosition = (context: CanvasRenderingContext2D, e: React.MouseEvent<HTM
   return { x, y };
 };
 
-interface mouseBehaviorProps {
-  canvasRef: React.MutableRefObject<HTMLCanvasElement | null>,
-  canvasData: CanvasData,
-  setCanvasData: (canvasData: CanvasData) => void,
-  e: React.MouseEvent<HTMLCanvasElement, MouseEvent>
+/**
+ * Updates canvasData at the end of an operation.
+ * @param canvasData data structure that supports the canvas element
+ * @param setCanvasData function to set canvasData
+ * @param newOp new operation to be added to canvasData
+ */
+const updateCanvasData = (canvasData: CanvasData, setCanvasData: (canvasData: CanvasData) => void, newOp: Operation) => {
+  setCanvasData({
+    currentOperation: undefined,
+    operationPointer: canvasData.operationPointer + 1,
+    operations: canvasData.operations.slice(0, canvasData.operationPointer + 1).concat(newOp)
+  });
 };
 
-const rectangleMouseBehaviors = {
-  "down": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
-    const context = canvasRef.current?.getContext("2d");
-    if (context) {
-      const pos = findPosition(context, e);
-      const op: PointOperation = {
-        type: "rectangle",
-        start: pos,
-        end: pos,
-        snapshot: context.getImageData(0, 0, WIDTH, HEIGHT)
-      };
-      setCanvasData({...canvasData, currentOperation: op});
+// A mapping of three drawing functions corresponding to three modes.
+export const draw = {
+  "rectangle": (context: CanvasRenderingContext2D, op: Operation, pos?: Position) => {
+    const rectOp = op as PointOperation;
+    const end = pos ? pos : rectOp.end;
+    context.strokeRect(rectOp.start.x, rectOp.start.y, end.x - rectOp.start.x, end.y - rectOp.start.y);
+  },
+  "line": (context: CanvasRenderingContext2D, op: Operation, pos?: Position) => {
+    const lineOp = op as PointOperation;
+    const end = pos ? pos : lineOp.end;
+    context.beginPath();
+    context.moveTo(lineOp.start.x, lineOp.start.y);
+    context.lineTo(end.x, end.y);
+    context.closePath();
+    context.stroke();
+  },
+  "pen": (context: CanvasRenderingContext2D, op: Operation, pos?: Position) => {
+    const penOp = op as PathOperation;
+    const posArr = pos ? [penOp.positions[penOp.positions.length - 1], pos] : penOp.positions;
+    for (let i = 0; i < posArr.length - 1; ++i) {
+      context.beginPath();
+      context.moveTo(posArr[i].x, posArr[i].y);
+      context.lineTo(posArr[i + 1].x, posArr[i + 1].y);
+      context.closePath();
+      context.stroke();
     }
+  }
+};
+
+// A mapping of mouse behaviors of the rectangle mode.
+const rectangleMouseBehaviors = {
+  "down": ({ width, height, canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
+    const context = canvasRef.current?.getContext("2d");
+    if (!context) { return }
+    const pos = findPosition(context, e);
+    const op: PointOperation = {
+      type: "rectangle",
+      start: pos,
+      end: pos,
+      snapshot: context.getImageData(0, 0, width, height)
+    };
+    setCanvasData({...canvasData, currentOperation: op});
   },
   "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.currentOperation;
-    if (context && op) {
-      const rectOp = op as PointOperation;
-      const pos = findPosition(context, e);
-      rectOp.snapshot && context.putImageData(rectOp.snapshot, 0, 0);
-      context.strokeRect(rectOp.start.x, rectOp.start.y, pos.x - rectOp.start.x, pos.y - rectOp.start.y);
-    }
+    if (!context || !canvasData.currentOperation) { return }
+    const rectOp = canvasData.currentOperation as PointOperation;
+    rectOp.snapshot && context.putImageData(rectOp.snapshot, 0, 0);
+    draw["rectangle"](context, rectOp, findPosition(context, e));
   },
   "up": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
     const op = canvasData.currentOperation;
-    context && op && setCanvasData({
-      currentOperation: undefined,
-      operationPointer: canvasData.operationPointer + 1,
-      operations: canvasData.operations.concat({ ...(op as PointOperation), end: findPosition(context, e), snapshot: undefined })
-    });
+    context && op && updateCanvasData(
+      canvasData, 
+      setCanvasData, 
+      { ...(op as PointOperation), end: findPosition(context, e), snapshot: undefined }
+    );
   }
 };
 
+// A mapping of mouse behaviors of the line mode.
 const lineMouseBehaviors = {
-  "down": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
+  "down": ({ width, height, canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    if (context) {
-      const pos = findPosition(context, e);
-      const op: PointOperation = {
-        type: "line",
-        start: pos,
-        end: pos,
-        snapshot: context.getImageData(0, 0, WIDTH, HEIGHT)
-      };
-      setCanvasData({...canvasData, currentOperation: op});
-    }
+    if (!context) { return }
+    const pos = findPosition(context, e);
+    const op: PointOperation = {
+      type: "line",
+      start: pos,
+      end: pos,
+      snapshot: context.getImageData(0, 0, width, height)
+    };
+    setCanvasData({...canvasData, currentOperation: op});
   },
-  "move": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
+  "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.currentOperation;
-    if (context && op) {
-      const lineOp = op as PointOperation;
-      const pos = findPosition(context, e);
-      lineOp.snapshot && context.putImageData(lineOp.snapshot, 0, 0);
-      context.beginPath();
-      context.moveTo(lineOp.start.x, lineOp.start.y);
-      context.lineTo(pos.x, pos.y);
-      context.closePath();
-      context.stroke();
-    }
+    if (!context || !canvasData.currentOperation) { return }
+    const lineOp = canvasData.currentOperation as PointOperation;
+    lineOp.snapshot && context.putImageData(lineOp.snapshot, 0, 0);
+    draw["line"](context, lineOp, findPosition(context, e));
   },
   "up": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
     const op = canvasData.currentOperation;
-    context && op && setCanvasData({
-      currentOperation: undefined,
-      operationPointer: canvasData.operationPointer + 1,
-      operations: canvasData.operations.concat({ ...(op as PointOperation), end: findPosition(context, e), snapshot: undefined })
-    });
+    context && op && updateCanvasData(
+      canvasData, 
+      setCanvasData,
+      { ...(op as PointOperation), end: findPosition(context, e), snapshot: undefined }
+    );
   }
 };
 
+// A mapping of mouse behaviors of the pen mode.
 const penMouseBehaviors = {
   "down": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    if (context) {
-      const pos = findPosition(context, e);
-      const op: PathOperation = {
-        type: "pen",
-        positions: [pos]
-      };
-      setCanvasData({...canvasData, currentOperation: op});
-    }
+    if (!context) { return }
+    const pos = findPosition(context, e);
+    const op: PathOperation = { type: "pen", positions: [pos]};
+    setCanvasData({...canvasData, currentOperation: op});
   },
   "move": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    const op = canvasData.currentOperation;
-    if (context && op) {
-      const penOp = op as PathOperation;
-      const lastPos = penOp.positions[penOp.positions.length - 1];
-      const pos = findPosition(context, e);
-      setCanvasData({...canvasData, currentOperation: {...penOp, positions: penOp.positions.concat(pos)}});
-      context.beginPath();
-      context.moveTo(lastPos.x, lastPos.y);
-      context.lineTo(pos.x, pos.y);
-      context.closePath();
-      context.stroke();
-    }
+    if (!context || !canvasData.currentOperation) { return }
+    const penOp = canvasData.currentOperation as PathOperation;
+    const pos = findPosition(context, e);
+    draw["pen"](context, penOp, pos);
+    setCanvasData({...canvasData, currentOperation: {...penOp, positions: penOp.positions.concat(pos)}});
   },
-  "up": ({ canvasRef, canvasData, setCanvasData, e }: mouseBehaviorProps) => {
+  "up": ({ canvasRef, canvasData, setCanvasData }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
     const op = canvasData.currentOperation;
-    context && op && setCanvasData({
-      currentOperation: undefined,
-      operationPointer: canvasData.operationPointer + 1,
-      operations: canvasData.operations.concat(op as PathOperation)
-    });
+    context && op && updateCanvasData(canvasData, setCanvasData, op);
   }
 };
 
+// A wrapper of the mappings of mouse behaviors.
 export const mouseBehaviorWrapper = {
   "rectangle": rectangleMouseBehaviors,
   "line": lineMouseBehaviors,
