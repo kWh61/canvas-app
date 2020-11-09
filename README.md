@@ -1,46 +1,86 @@
-# Getting Started with Create React App
+# Canvas App by Kehan Wang
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Set Up
 
-## Available Scripts
+### Install all dependencies:
 
-In the project directory, you can run:
+```bash
+yarn install
+```
 
-### `yarn start`
+or 
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+```bash
+npm install
+```
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+### Start the program:
 
-### `yarn test`
+```bash
+yarn start
+```
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+or 
 
-### `yarn build`
+```bash
+npm start
+```
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+## Data Structure
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+The key part of the data structure of this canvas app is having a "CanvasData" Object. It holds the current operation during the mouseDown - mouseMove - mouseUp cycle, the collection all previous operations and a "pointer" to the latest operation. The second and third attributes are for the undo-redo functionality, which I will talk about in the next section.
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+The current operation consists of two types: "PointOperation" and "PathOperation". The "rectangle" and "line" modes use PointOperation and the "pen" mode uses PathOperation. This is because we need to keep track of all position data during the mouseMove phrase for the "pen" mode, but we don't need to do this for the other two modes.
 
-### `yarn eject`
+For PointOperation, I keep track of its starting point as well as a snapshot image of the state before the operation to clear the effects during mouseMove. For PathOperation, I simply store all the position data in an array.
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+To sum up, here is a breakdown of the core of "CanvasData":
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+- CanvasData
+  - currentOperation
+    - type
+    - PointOperation
+      - start
+      - end
+      - snapshot (cleared afterwards for performance)
+    - PathOperation
+      - positions
+  - operationPointer
+  - operations
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Undo-Redo Functionality
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+I implemented the undo-redo functionality by storing the history of all operations as well as a pointer to the latest operation, which can be explained by the following rules:
 
-## Learn More
+- If the user undos, move the pointer backward and re-draw all previous operations.
+- If the user redos, move the pointer forward and draw the new operation.
+- If the user undos then creates a brand-new operation, remove all operations after the pointer.
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+I chose this approach because it is both performance and memory friendly. Although there may exist a better approach, which "reverses" a user operation and thus eliminating the need of redrawing all previous operations, it could be unstable and cause errors (e.g. erasing parts of overlapping lines).
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## List of Outside Sources
+
+- [MDN Web Docs](https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Drawing_shapes)
+- [Drawing App Example](http://www.williammalone.com/articles/create-html5-canvas-javascript-drawing-app/)
+- [Color Combination](https://coolors.co/)
+- Also for some small issues that I ran into, I referenced solutions on StackOverflow.
+
+## Problems
+
+- How to clear the previous rectangle during onMouseMove?
+  - I tried clearRect() but did not work. This might be because the border is not accounted for.
+  - I solved this problem by restoring to the snapshot before the operation.
+- How to avoid canceling out shapes with undoing or redoing?
+  - If we simply reverse an operation for undoing
+    - Observed behavior: the overlapping part of the two lines is missing
+    - Expected behavior: the other line should remain intact
+  - I solved this problem by redrawing all previous operations.
+- How to better structure all the logic to make this app maintainable?
+  - There are three modes and three kinds of mouse behaviors, so it would be messy if simply use if-else or switch statements.
+  - I used object literals for mapping of different functions.
+  - However, this results in some duplicate code.
+- Just a quick note, the errors in the console is related to Antd, a third party library I was using. The issue can be found [here](https://github.com/ant-design/ant-design/issues/22493).
+
+## End Note
+
+This is a really fun assignment and a great learning opportunity! Please let me know if you have any questions/comments/feedbacks. Hope to hear from you soon :)
