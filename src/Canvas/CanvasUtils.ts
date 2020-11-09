@@ -49,11 +49,11 @@ const findPosition = (context: CanvasRenderingContext2D, e: React.MouseEvent<HTM
  * @param setCanvasData function to set canvasData
  * @param newOp new operation to be added to canvasData
  */
-const updateCanvasData = (canvasData: CanvasData, setCanvasData: (canvasData: CanvasData) => void, newOp: Operation) => {
+const updateCanvasData = ({ operations, operationPointer }: CanvasData, setCanvasData: (canvasData: CanvasData) => void, newOp: Operation) => {
   setCanvasData({
     currentOperation: undefined,
-    operationPointer: canvasData.operationPointer + 1,
-    operations: canvasData.operations.slice(0, canvasData.operationPointer + 1).concat(newOp)
+    operationPointer: operationPointer + 1,
+    operations: operations.slice(0, operationPointer + 1).concat(newOp)
   });
 };
 
@@ -100,10 +100,10 @@ const rectangleMouseBehaviors = {
     };
     setCanvasData({...canvasData, currentOperation: op});
   },
-  "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "move": ({ canvasRef, canvasData: { currentOperation }, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    if (!context || !canvasData.currentOperation) { return }
-    const rectOp = canvasData.currentOperation as PointOperation;
+    if (!context || !currentOperation) { return }
+    const rectOp = currentOperation as PointOperation;
     rectOp.snapshot && context.putImageData(rectOp.snapshot, 0, 0);
     draw["rectangle"](context, rectOp, findPosition(context, e));
   },
@@ -132,10 +132,10 @@ const lineMouseBehaviors = {
     };
     setCanvasData({...canvasData, currentOperation: op});
   },
-  "move": ({ canvasRef, canvasData, e }: mouseBehaviorProps) => {
+  "move": ({ canvasRef, canvasData: { currentOperation }, e }: mouseBehaviorProps) => {
     const context = canvasRef.current?.getContext("2d");
-    if (!context || !canvasData.currentOperation) { return }
-    const lineOp = canvasData.currentOperation as PointOperation;
+    if (!context || !currentOperation) { return }
+    const lineOp = currentOperation as PointOperation;
     lineOp.snapshot && context.putImageData(lineOp.snapshot, 0, 0);
     draw["line"](context, lineOp, findPosition(context, e));
   },

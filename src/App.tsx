@@ -10,7 +10,7 @@ const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement|null>(null);
   return (
     <Layout id={styles.container}>
-      <MenuBar />
+      <MenuBar canvasRef={canvasRef} />
       <Layout>
         <Sider id={styles.sider} collapsed={true}><Toolbar canvasRef={canvasRef} /></Sider>
         <Content id={styles.content}><Canvas canvasRef={canvasRef} /></Content>
